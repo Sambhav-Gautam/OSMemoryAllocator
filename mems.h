@@ -5,26 +5,21 @@
 
 #define PAGE_SIZE 4096
 
-typedef struct Mapping {
-    void* SPA;
-    void* EPA;
-    int SVA;
-    int EVA;
-} mapp_t;
-
 typedef struct sub_t {
-    mapp_t mapping;  // Include mapp_t structure in sub_t
     void* mem_start_addr;
     size_t mem_size;
     void* mem_end_addr;
+    int SVA;
+    int EVA;
     int is_hole;
     struct sub_t* next;
     struct sub_t* prev;
 } sub_t;
 
 typedef struct main_t {
-    mapp_t mapping;
     void* mem_start_addr;
+    int SVA;
+    int EVA;
     void* current;
     size_t mem_size;
     size_t remaining;
@@ -43,6 +38,7 @@ void mems_init() {
     tail = NULL;
     mems_start = (void*)starting;
 }
+
 void* mems_malloc(size_t size) {
     if (size <= 0) {
         perror("Insufficient size. Size must be greater than zero.");
@@ -54,58 +50,51 @@ void* mems_malloc(size_t size) {
     if (head == NULL) {
         main_t* newnode = (main_t*)mmap(NULL, allocate, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
         head = newnode;
-        newnode->mapping.SVA = starting;
-        newnode->mapping.EVA = starting + allocate - 1;
-
-        newnode->mem_start_addr = newnode->mapping.SVA;
+        newnode->mem_start_addr = newnode;
         newnode->current = newnode->mem_start_addr;
+        newnode->SVA = starting;
+        newnode->EVA = starting + allocate - 1;
         newnode->mem_size = allocate;
-        newnode->remaining = allocate;
+        newnode->remaining = allocate; 
         newnode->prev = NULL;
         newnode->next = NULL;
 
-        // Initialize the process sub-node within the main node
-        sub_t* sub_chain = &(newnode->sub_chain); // Create a temporary pointer
-        sub_chain->mapping.SPA = newnode->mapping.SPA;
-        sub_chain->mapping.EPA = newnode->mapping.SPA + size - 1;
-        sub_chain->mapping.SVA = newnode->mapping.SVA;
-        sub_chain->mapping.EVA = newnode->mapping.SVA + size - 1;
-        sub_chain->mem_start_addr = newnode->mem_start_addr;
-        sub_chain->mem_end_addr = sub_chain->mem_start_addr + size;
-        sub_chain->mem_size = size;
-        sub_chain->is_hole = 0;  // The current sub-node is not a hole, it's occupied by a process
-        sub_chain->next = NULL;  // Initialize the sub-chain's 'next' pointer to NULL
+        newnode->sub_chain.mem_start_addr = newnode->mem_start_addr;
+        newnode->sub_chain.mem_end_addr = newnode->mem_start_addr + newnode->mem_size - 1;
 
-        if (size < allocate) {
-            // Create a hole sub-node within the main node for the remaining space
-            sub_t* hole_node = (sub_t*)((char*)sub_chain->mem_start_addr + size);
-            hole_node->mapping.SPA = sub_chain->mapping.EPA + 1;
-            hole_node->mapping.EPA = newnode->mapping.EPA;
-            hole_node->mapping.SVA = sub_chain->mapping.EVA + 1;
-            hole_node->mapping.EVA = newnode->mapping.EVA;
-            hole_node->mem_start_addr = sub_chain->mem_start_addr + size;
-            hole_node->mem_end_addr = sub_chain->mem_end_addr;
-            hole_node->mem_size = allocate - size;
-            hole_node->is_hole = 1;  // The remaining space is a hole
-            hole_node->prev = sub_chain;  // Set the 'prev' pointer to the process sub-node
-            hole_node->next = NULL;  // There's no sub-node after the hole
-        }
+        //Virtual Mapping 
+        newnode -> sub_chain.SVA = newnode -> SVA;
+        newnode -> sub_chain.EVA = newnode -> SVA + size -1;
+        //Virtual Mapping
+
+        newnode->sub_chain.mem_size = newnode->mem_size;
+        newnode->sub_chain.is_hole = 0;  // The current sub-node is not a hole, it's occupied by a process
+
+        // Create a sub-node for the remaining hole.
+        newnode->sub_chain.next = (sub_t*)((char*)newnode->sub_chain.mem_start_addr + size);
+        newnode->sub_chain.next->mem_start_addr = newnode->sub_chain.mem_end_addr + 1;
+        newnode->sub_chain.next->mem_end_addr = newnode->sub_chain.next->mem_start_addr + (allocate - size) - 1;
+
+        //Virtual Mapping
+        newnode ->sub_chain.next->SVA = newnode -> sub_chain.EVA+1;
+        newnode -> sub_chain.next->EVA = newnode ->sub_chain.EVA +allocate -size;
+        //Virtual Mapping
+        newnode->sub_chain.next->mem_size = allocate - size;
+        newnode->sub_chain.next->is_hole = 1;  // The remaining space is a hole
+
+        newnode->sub_chain.next->prev = &newnode->sub_chain;  // Set the 'prev' pointer to the process sub-node
+        newnode->sub_chain.next->next = NULL;  // There's no sub-node after the hole
 
         // Update the remaining and current pointers.
-        newnode->remaining -= allocate;
-        newnode->current += allocate;
+        newnode->remaining -= size;
+        newnode->current = newnode->sub_chain.next->mem_end_addr + 1;
 
-        return newnode->mapping.SVA;
+        return (void*)newnode->SVA;
     } else {
         // Implement logic for reusing segments from the free list and other cases.
         // ...
     }
 }
-
-
-
-
-
 
 void mems_print_stats() {
     main_t* current = head;
@@ -117,13 +106,13 @@ void mems_print_stats() {
     printf("MeMS Stats:\n");
 
     while (current != NULL) {
-        printf("MAIN[%d:%d] -> ", current->mapping.SVA, current->mapping.EVA);
+        printf("MAIN[%d:%d] -> ", current->SVA, current->EVA);
 
         sub_t* sub_current = &current->sub_chain;
         int sub_chain_length = 0;
 
         while (sub_current != NULL) {
-            printf("<%s>[SVA:%d EVA:%d]", sub_current->is_hole ? "HOLE" : "PROCESS", sub_current->mapping.SVA, sub_current->mapping.EVA);
+            printf("<%s>[SVA:%d EVA:%d] <-> ", sub_current->is_hole ? "HOLE" : "PROCESS", sub_current->SVA, sub_current->EVA);
             if (sub_current->is_hole) {
                 total_space_unused += sub_current->mem_size;
             }
@@ -148,4 +137,3 @@ void mems_print_stats() {
     }
     printf("\n");
 }
-

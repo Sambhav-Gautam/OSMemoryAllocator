@@ -56,7 +56,6 @@ void *mems_malloc(size_t size) {
 
 
   if (head == NULL) {
-    // Create a new main node
     main_t *new_main = (main_t *)mmap(NULL, allocate, PROT_READ | PROT_WRITE,
                                       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
@@ -80,7 +79,7 @@ void *mems_malloc(size_t size) {
 
     new_main->sub_chain.mem_start_addr = new_main->mem_start_addr;
     new_main->sub_chain.mem_end_addr =
-        new_main->mem_start_addr + new_main->mem_size - 1;
+        new_main->mem_start_addr + new_main->mem_size  - 1;
 
     // Virtual Mapping
     new_main->sub_chain.SVA = new_main->SVA;
@@ -89,14 +88,14 @@ void *mems_malloc(size_t size) {
 
     new_main->sub_chain.mem_size = new_main->mem_size;
     new_main->sub_chain.is_hole =
-        0; // The current sub-node is not a hole, it's occupied by a process
+        0; 
 
-    // Create a sub-node for the remaining hole in the new main node.
+    
     if (allocate > size) {
       sub_t *new_hole =
           (sub_t *)((char *)new_main->sub_chain.mem_start_addr + size);
       new_hole->mem_start_addr = new_main->sub_chain.mem_end_addr + 1;
-      new_hole->mem_end_addr = new_hole->mem_start_addr + (allocate - size) - 1;
+      new_hole->mem_end_addr = new_hole->mem_start_addr + (allocate +- size) - 1;
 
       // Virtual Mapping
       new_hole->SVA = new_main->sub_chain.EVA + 1;
@@ -114,26 +113,25 @@ void *mems_malloc(size_t size) {
       // new_main->sub_chain.prev = new_main;
     }
 
-    // Update the remaining and current pointers in the new main node.
+    
     new_main->remaining -= size;
     new_main->current = new_main->sub_chain.mem_start_addr + size;
 
     return (void *)new_main->SVA;
   } else {
-    // When 'head' is not NULL, search for suitable segments in the sub-nodes.
+    
     main_t *current_main = head;
 
     while (current_main != NULL) {
       sub_t *current_sub = &(current_main->sub_chain);
 
-      // Search for a hole of adequate size.
+    
       while (current_sub != NULL) {
         if (current_sub->is_hole && current_sub->mem_size >= size) {
-          // Check if the hole size is greater than or equal to the allocation
-          // size.
+          
 
           if (current_sub->mem_size > size) {
-            // Create a new sub-node for the remaining hole.
+            
             sub_t *new_hole = (sub_t *)(((char *)current_sub->mem_start_addr) + size);
             new_hole->mem_start_addr = (void *)((char *)(current_sub->mem_start_addr) + size);
             new_hole->mem_end_addr = (void *)(((char *)new_hole->mem_start_addr) + (current_sub->mem_size - size) - 1);
@@ -148,7 +146,7 @@ void *mems_malloc(size_t size) {
             //  Virtual Mapping
 
             new_hole->mem_size = current_sub->mem_size - size;
-            new_hole->is_hole = 1; // The remaining space is a hole
+            new_hole->is_hole = 1; 
 
             new_hole->prev =
                 current_sub; // Set the 'prev' pointer to the process sub-node
@@ -156,15 +154,13 @@ void *mems_malloc(size_t size) {
                 current_sub->next; // Link the new sub-node to the next one
 
             current_sub->mem_size = size;
-            //Shifting this line to work for both  > and = condition
-            // current_sub->is_hole = 0; // The current sub-node is not a hole,
-                                      // it's occupied by a process
-            current_sub -> EVA = current_sub -> SVA +size -1; //EDITED
+            
+            current_sub -> EVA = current_sub -> SVA +size -1; 
             current_sub->next =
-                new_hole; // Link the current sub-node to the new hole
+                new_hole; 
           }
-          current_sub -> is_hole =0; //shuifted line 
-          // Update the remaining and current pointers.
+          current_sub -> is_hole =0; 
+          
           current_main->remaining -= size;
           current_main->current = current_sub->mem_end_addr + 1;
 
@@ -175,8 +171,7 @@ void *mems_malloc(size_t size) {
       }
 
       if (current_main->next == NULL) {
-        // If no suitable hole is found in the last main node, create a new main
-        // node.
+       
         size_t new_allocate = (size + PAGE_SIZE - 1) / PAGE_SIZE * PAGE_SIZE ;
         new_allocate += sizeof(main_t); 
         main_t *new_main =
@@ -196,14 +191,14 @@ void *mems_malloc(size_t size) {
         new_main->mem_size = new_allocate;
         new_main->remaining = new_allocate;
 
-        // Link the new main node
+       
         new_main->next = current_main->next;
         new_main->prev = current_main;
         current_main->next = new_main;
 
         new_main->sub_chain.mem_start_addr = new_main->mem_start_addr;
         new_main->sub_chain.mem_end_addr =
-            new_main->mem_start_addr + new_main->mem_size - 1;
+            new_main->mem_start_addr + new_main->mem_size - 1; //
 
         // Virtual Mapping
         new_main->sub_chain.SVA = new_main->SVA;
@@ -212,9 +207,9 @@ void *mems_malloc(size_t size) {
 
         new_main->sub_chain.mem_size = new_main->mem_size;
         new_main->sub_chain.is_hole =
-            0; // The current sub-node is not a hole, it's occupied by a process
+            0; 
 
-        // Create a sub-node for the remaining hole in the new main node.
+        
         if (new_allocate > size) {
           sub_t *new_hole =
               (sub_t *)((char *)new_main->sub_chain.mem_start_addr + size);
@@ -234,9 +229,9 @@ void *mems_malloc(size_t size) {
           new_hole->mem_size = new_allocate - size;
           new_hole->is_hole = 1; // The remaining space is a hole
 
-          new_hole->prev = &new_main->sub_chain; // Set the 'prev' pointer to // the process sub-node
-          new_hole->next = NULL; // There's no sub-node after the hole
-          new_main->sub_chain.next = new_hole; // Added New at 6:33 am
+          new_hole->prev = &new_main->sub_chain; 
+          new_hole->next = NULL;
+          new_main->sub_chain.next = new_hole; 
         }
 
         // Update the remaining and current pointers in the new main node.
@@ -312,18 +307,16 @@ void mems_finish() {
        main_t *temp = current;
        current = current->next;
        if (munmap(temp, temp->mem_size) == -1) {
-           // An error occurred during munmap, so handle it.
+          
            perror(".......munmap failed......");
-           // You can check errno for specific error codes if needed.
-           // For example, if (errno == EFAULT) { /* handle EFAULT error */ }
-           // Optionally, you can continue cleanup or exit the function.
+           
        }
    }
 
    head = NULL;
    tail = NULL;
    mems_start = NULL;
-   printf("..........Successfully UnMapped the Memory without Errors .........");
+   printf("..........Successfully UnMapped the Memory without Errors .........\n");
 }
 
 
@@ -338,16 +331,15 @@ void mems_free(void* ptr) {
     while (current_main != NULL) {
         sub_t *current_sub = &(current_main->sub_chain);
 
-        // Search for the corresponding sub-chain node
+        
         while (current_sub != NULL) {
             if (current_sub->SVA == ptr) {
-                // Mark the sub-chain node as HOLE
+                
                 current_sub->is_hole = 1;
 
-                // Update main node's remaining and current pointers
+                
                 current_main->remaining += current_sub->mem_size;
 
-                // Merge consecutive holes
                 sub_t* next_sub = current_sub->next;
                 if (next_sub != NULL && next_sub->is_hole) {
                     current_sub->mem_size += next_sub->mem_size;
@@ -373,6 +365,21 @@ void mems_free(void* ptr) {
         current_main = current_main->next;
     }
 
-    // If the corresponding sub-chain node is not found, print an error message
+   
     perror("Invalid MeMS Virtual address for mems_free\n");
+}
+
+
+void *mems_get(void *v_ptr) {
+    main_t *current_main = head;
+
+    while (current_main) {
+        if ((unsigned long)v_ptr >= (unsigned long)current_main->SVA &&
+            (unsigned long)v_ptr <= (unsigned long)current_main->EVA) {
+            return current_main->mem_start_addr;
+        }
+        current_main = current_main->next;
+    }
+
+    return NULL; 
 }

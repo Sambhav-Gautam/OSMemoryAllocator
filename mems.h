@@ -6,98 +6,258 @@
 #define PAGE_SIZE 4096
 
 typedef struct sub_t {
-    void* mem_start_addr;
-    size_t mem_size;
-    void* mem_end_addr;
-    int SVA;
-    int EVA;
-    int is_hole;
-    struct sub_t* next;
-    struct sub_t* prev;
+  void *mem_start_addr;
+  size_t mem_size;
+  void *mem_end_addr;
+  int SVA;
+  int EVA;
+  int is_hole;
+  struct sub_t *next;
+  struct sub_t *prev;
 } sub_t;
 
 typedef struct main_t {
-    void* mem_start_addr;
-    int SVA;
-    int EVA;
-    void* current;
-    size_t mem_size;
-    size_t remaining;
-    struct main_t* prev;
-    struct main_t* next;
-    sub_t sub_chain;
+  void *mem_start_addr;
+  int SVA;
+  int EVA;
+  void *current;
+  size_t mem_size;
+  size_t remaining;
+  struct main_t *prev;
+  struct main_t *next;
+  sub_t sub_chain;
 } main_t;
 
-main_t* head = NULL;
-sub_t* tail = NULL;
-void* mems_start = NULL;
+main_t *head ;
+sub_t *tail = NULL;
+void *mems_start = NULL;
 int starting = 1000;
+int mems_init_used  = 0;
 
 void mems_init() {
-    head = NULL;
-    tail = NULL;
-    mems_start = (void*)starting;
+  head = NULL;
+  tail = NULL;
+  mems_start = (void *)starting;
+  mems_init_used =1;
 }
 
-void* mems_malloc(size_t size) {
-    if (size <= 0) {
-        perror("Insufficient size. Size must be greater than zero.");
-        return NULL;
+void *mems_malloc(size_t size) {
+   if (size <= 0) {
+    fprintf(stderr, "Error: Insufficient size. Size must be greater than zero.\n");
+    fprintf(stderr, "Program exited ...\n");
+    exit(EXIT_FAILURE);
+  } else if (mems_init_used == 0) {
+    fprintf(stderr, "Error: Memory system not initialized. Call mems_init() first.\n");
+    fprintf(stderr, "Program exited ...\n");
+    exit(EXIT_FAILURE);
+  }
+
+  size_t allocate = (size + PAGE_SIZE - 1) / PAGE_SIZE * PAGE_SIZE + sizeof(main_t);
+
+
+  if (head == NULL) {
+    // Create a new main node
+    main_t *new_main = (main_t *)mmap(NULL, allocate, PROT_READ | PROT_WRITE,
+                                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
+
+    allocate -= sizeof(main_t);
+
+    if (new_main == MAP_FAILED) {
+      perror("Memory allocation failed");
+      return NULL;
     }
 
-    size_t allocate = (size + PAGE_SIZE - 1) / PAGE_SIZE * PAGE_SIZE;
+    new_main->mem_start_addr = new_main;
+    new_main->current = new_main->mem_start_addr;
+    new_main->SVA = starting;
+    new_main->EVA = starting + allocate - 1;
+    new_main->mem_size = allocate;
+    new_main->remaining = allocate;
+    new_main->prev = NULL;
+    new_main->next = NULL;
+    head = new_main;
 
-    if (head == NULL) {
-        main_t* newnode = (main_t*)mmap(NULL, allocate, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-        head = newnode;
-        newnode->mem_start_addr = newnode;
-        newnode->current = newnode->mem_start_addr;
-        newnode->SVA = starting;
-        newnode->EVA = starting + allocate - 1;
-        newnode->mem_size = allocate;
-        newnode->remaining = allocate; 
-        newnode->prev = NULL;
-        newnode->next = NULL;
+    new_main->sub_chain.mem_start_addr = new_main->mem_start_addr;
+    new_main->sub_chain.mem_end_addr =
+        new_main->mem_start_addr + new_main->mem_size - 1;
 
-        newnode->sub_chain.mem_start_addr = newnode->mem_start_addr;
-        newnode->sub_chain.mem_end_addr = newnode->mem_start_addr + newnode->mem_size - 1;
+    // Virtual Mapping
+    new_main->sub_chain.SVA = new_main->SVA;
+    new_main->sub_chain.EVA = new_main->SVA + size - 1;
+    // Virtual Mapping
 
-        //Virtual Mapping 
-        newnode -> sub_chain.SVA = newnode -> SVA;
-        newnode -> sub_chain.EVA = newnode -> SVA + size -1;
-        //Virtual Mapping
+    new_main->sub_chain.mem_size = new_main->mem_size;
+    new_main->sub_chain.is_hole =
+        0; // The current sub-node is not a hole, it's occupied by a process
 
-        newnode->sub_chain.mem_size = newnode->mem_size;
-        newnode->sub_chain.is_hole = 0;  // The current sub-node is not a hole, it's occupied by a process
+    // Create a sub-node for the remaining hole in the new main node.
+    if (allocate > size) {
+      sub_t *new_hole =
+          (sub_t *)((char *)new_main->sub_chain.mem_start_addr + size);
+      new_hole->mem_start_addr = new_main->sub_chain.mem_end_addr + 1;
+      new_hole->mem_end_addr = new_hole->mem_start_addr + (allocate - size) - 1;
 
-        // Create a sub-node for the remaining hole.
-        newnode->sub_chain.next = (sub_t*)((char*)newnode->sub_chain.mem_start_addr + size);
-        newnode->sub_chain.next->mem_start_addr = newnode->sub_chain.mem_end_addr + 1;
-        newnode->sub_chain.next->mem_end_addr = newnode->sub_chain.next->mem_start_addr + (allocate - size) - 1;
+      // Virtual Mapping
+      new_hole->SVA = new_main->sub_chain.EVA + 1;
+      new_hole->EVA = new_hole->SVA + (allocate - size) - 1;
+      // Virtual Mapping
 
-        //Virtual Mapping
-        newnode ->sub_chain.next->SVA = newnode -> sub_chain.EVA+1;
-        newnode -> sub_chain.next->EVA = newnode ->sub_chain.EVA +allocate -size;
-        //Virtual Mapping
-        newnode->sub_chain.next->mem_size = allocate - size;
-        newnode->sub_chain.next->is_hole = 1;  // The remaining space is a hole
+      new_hole->mem_size = allocate - size;
+      new_hole->is_hole = 1; // The remaining space is a hole
 
-        newnode->sub_chain.next->prev = &newnode->sub_chain;  // Set the 'prev' pointer to the process sub-node
-        newnode->sub_chain.next->next = NULL;  // There's no sub-node after the hole
-
-        // Update the remaining and current pointers.
-        newnode->remaining -= size;
-        newnode->current = newnode->sub_chain.next->mem_end_addr + 1;
-
-        return (void*)newnode->SVA;
-    } else {
-        // Implement logic for reusing segments from the free list and other cases.
-        // ...
+      new_hole->prev =
+          &new_main
+               ->sub_chain;  // Set the 'prev' pointer to the process sub-node
+      new_hole->next = NULL; // There's no sub-node after the hole
+      new_main->sub_chain.next = new_hole;
+      // new_main->sub_chain.prev = new_main;
     }
+
+    // Update the remaining and current pointers in the new main node.
+    new_main->remaining -= size;
+    new_main->current = new_main->sub_chain.mem_start_addr + size;
+
+    return (void *)new_main->SVA;
+  } else {
+    // When 'head' is not NULL, search for suitable segments in the sub-nodes.
+    main_t *current_main = head;
+
+    while (current_main != NULL) {
+      sub_t *current_sub = &(current_main->sub_chain);
+
+      // Search for a hole of adequate size.
+      while (current_sub != NULL) {
+        if (current_sub->is_hole && current_sub->mem_size >= size) {
+          // Check if the hole size is greater than or equal to the allocation
+          // size.
+
+          if (current_sub->mem_size > size) {
+            // Create a new sub-node for the remaining hole.
+            sub_t *new_hole = (sub_t *)(((char *)current_sub->mem_start_addr) + size);
+            new_hole->mem_start_addr = (void *)((char *)(current_sub->mem_start_addr) + size);
+            new_hole->mem_end_addr = (void *)(((char *)new_hole->mem_start_addr) + (current_sub->mem_size - size) - 1);
+
+
+            // Virtual Mapping
+            new_hole->SVA = current_sub->SVA + size;
+            // new_hole->SVA = current_sub->EVA + 1;
+            new_hole->EVA = current_sub->EVA;
+            // new_hole->EVA = new_hole->SVA + (current_sub->mem_size - size) -
+            // 1;
+            //  Virtual Mapping
+
+            new_hole->mem_size = current_sub->mem_size - size;
+            new_hole->is_hole = 1; // The remaining space is a hole
+
+            new_hole->prev =
+                current_sub; // Set the 'prev' pointer to the process sub-node
+            new_hole->next =
+                current_sub->next; // Link the new sub-node to the next one
+
+            current_sub->mem_size = size;
+            //Shifting this line to work for both  > and = condition
+            // current_sub->is_hole = 0; // The current sub-node is not a hole,
+                                      // it's occupied by a process
+            current_sub -> EVA = current_sub -> SVA +size -1; //EDITED
+            current_sub->next =
+                new_hole; // Link the current sub-node to the new hole
+          }
+          current_sub -> is_hole =0; //shuifted line 
+          // Update the remaining and current pointers.
+          current_main->remaining -= size;
+          current_main->current = current_sub->mem_end_addr + 1;
+
+          return current_sub->SVA;
+        }
+
+        current_sub = current_sub->next;
+      }
+
+      if (current_main->next == NULL) {
+        // If no suitable hole is found in the last main node, create a new main
+        // node.
+        size_t new_allocate = (size + PAGE_SIZE - 1) / PAGE_SIZE * PAGE_SIZE ;
+        new_allocate += sizeof(main_t); 
+        main_t *new_main =
+            (main_t *)mmap(NULL, new_allocate, PROT_READ | PROT_WRITE,
+                           MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        new_allocate -=sizeof(main_t);
+
+        if (new_main == MAP_FAILED) {
+          perror("Memory allocation failed");
+          return NULL;
+        }
+
+        new_main->mem_start_addr = new_main;
+        new_main->current = new_main->mem_start_addr;
+        new_main->SVA = current_main->EVA + 1;
+        new_main->EVA = new_main->SVA + new_allocate - 1;
+        new_main->mem_size = new_allocate;
+        new_main->remaining = new_allocate;
+
+        // Link the new main node
+        new_main->next = current_main->next;
+        new_main->prev = current_main;
+        current_main->next = new_main;
+
+        new_main->sub_chain.mem_start_addr = new_main->mem_start_addr;
+        new_main->sub_chain.mem_end_addr =
+            new_main->mem_start_addr + new_main->mem_size - 1;
+
+        // Virtual Mapping
+        new_main->sub_chain.SVA = new_main->SVA;
+        new_main->sub_chain.EVA = new_main->SVA + size - 1;
+        // Virtual Mapping
+
+        new_main->sub_chain.mem_size = new_main->mem_size;
+        new_main->sub_chain.is_hole =
+            0; // The current sub-node is not a hole, it's occupied by a process
+
+        // Create a sub-node for the remaining hole in the new main node.
+        if (new_allocate > size) {
+          sub_t *new_hole =
+              (sub_t *)((char *)new_main->sub_chain.mem_start_addr + size);
+          new_hole->mem_start_addr =
+              new_main->sub_chain.mem_end_addr +
+              1; // changed from sub_chain.mem_end_addr +1
+          new_hole->mem_end_addr = new_hole->mem_start_addr +
+                                   (new_allocate - size) -
+                                   1; // changed fromnew_hole->mem_start_addr +
+                                      // (new_allocate - size) - 1
+
+          // Virtual Mapping
+          new_hole->SVA = new_main->sub_chain.EVA + 1;
+          new_hole->EVA = new_hole->SVA + (new_allocate - size) - 1;
+          // Virtual Mapping
+
+          new_hole->mem_size = new_allocate - size;
+          new_hole->is_hole = 1; // The remaining space is a hole
+
+          new_hole->prev = &new_main->sub_chain; // Set the 'prev' pointer to // the process sub-node
+          new_hole->next = NULL; // There's no sub-node after the hole
+          new_main->sub_chain.next = new_hole; // Added New at 6:33 am
+        }
+
+        // Update the remaining and current pointers in the new main node.
+        new_main->remaining -= size;
+        new_main->current = new_main->sub_chain.mem_start_addr + size;
+
+        return (void *)new_main->SVA;
+      }
+
+      current_main = current_main->next;
+    }
+  }
 }
 
 void mems_print_stats() {
-    main_t* current = head;
+    if (mems_init_used == 0) {
+      fprintf(stderr, "Error: Memory system not initialized. Call mems_init() first.\n");
+      fprintf(stderr, "Program exited ...\n");
+      exit(EXIT_FAILURE);
+    }
+    main_t *current = head;
     int total_pages_used = 0;
     size_t total_space_unused = 0;
     int main_chain_length = 0;
@@ -108,16 +268,18 @@ void mems_print_stats() {
     while (current != NULL) {
         printf("MAIN[%d:%d] -> ", current->SVA, current->EVA);
 
-        sub_t* sub_current = &current->sub_chain;
+        sub_t *sub_current = &current->sub_chain;
         int sub_chain_length = 0;
 
         while (sub_current != NULL) {
-            printf("<%s>[SVA:%d EVA:%d] <-> ", sub_current->is_hole ? "HOLE" : "PROCESS", sub_current->SVA, sub_current->EVA);
-            if (sub_current->is_hole) {
-                total_space_unused += sub_current->mem_size;
-            }
-            sub_current = sub_current->next;
-            sub_chain_length++;
+        printf("<%s>[SVA:%d:EVA:%d] <-> ",
+                sub_current->is_hole ? "H" : "P", sub_current->SVA,
+                sub_current->EVA);
+        if (sub_current->is_hole) {
+            total_space_unused += sub_current->mem_size;
+        }
+        sub_current = sub_current->next;
+        sub_chain_length++;
         }
 
         sub_chain_lengths[main_chain_length] = sub_chain_length;
@@ -131,9 +293,86 @@ void mems_print_stats() {
     printf("Space unused: %zu\n", total_space_unused);
     printf("Main Chain Length: %d\n", main_chain_length);
     printf("Sub-chain Length array: ");
-    
+
     for (int i = 0; i < main_chain_length; i++) {
         printf("%d ", sub_chain_lengths[i]);
     }
     printf("\n");
+}
+
+void mems_finish() {
+  if (mems_init_used == 0) {
+    fprintf(stderr, "Error: Memory system not initialized. Call mems_init() first.\n");
+    fprintf(stderr, "Program exited ...\n");
+    exit(EXIT_FAILURE);
+  }
+
+   main_t *current = head;
+   while (current != NULL) {
+       main_t *temp = current;
+       current = current->next;
+       if (munmap(temp, temp->mem_size) == -1) {
+           // An error occurred during munmap, so handle it.
+           perror(".......munmap failed......");
+           // You can check errno for specific error codes if needed.
+           // For example, if (errno == EFAULT) { /* handle EFAULT error */ }
+           // Optionally, you can continue cleanup or exit the function.
+       }
+   }
+
+   head = NULL;
+   tail = NULL;
+   mems_start = NULL;
+   printf("..........Successfully UnMapped the Memory without Errors .........");
+}
+
+
+void mems_free(void* ptr) {
+  if (mems_init_used == 0) {
+    fprintf(stderr, "Error: Memory system not initialized. Call mems_init() first.\n");
+    fprintf(stderr, "Program exited ...\n");
+    exit(EXIT_FAILURE);
+  }
+    main_t* current_main = head;
+
+    while (current_main != NULL) {
+        sub_t *current_sub = &(current_main->sub_chain);
+
+        // Search for the corresponding sub-chain node
+        while (current_sub != NULL) {
+            if (current_sub->SVA == ptr) {
+                // Mark the sub-chain node as HOLE
+                current_sub->is_hole = 1;
+
+                // Update main node's remaining and current pointers
+                current_main->remaining += current_sub->mem_size;
+
+                // Merge consecutive holes
+                sub_t* next_sub = current_sub->next;
+                if (next_sub != NULL && next_sub->is_hole) {
+                    current_sub->mem_size += next_sub->mem_size;
+                    current_sub->mem_end_addr = next_sub->mem_end_addr;
+                    current_sub->EVA = next_sub->EVA;
+                    current_sub->next = next_sub->next;
+                    if (next_sub->next != NULL) {
+                        next_sub->next->prev = current_sub;
+                    }
+                }
+
+                if (current_sub->next != NULL) {
+                    current_main->current = current_sub->next->mem_start_addr;
+                } else {
+                    current_main->current = current_sub->mem_start_addr;
+                }
+                return;
+            }
+
+            current_sub = current_sub->next;
+        }
+
+        current_main = current_main->next;
+    }
+
+    // If the corresponding sub-chain node is not found, print an error message
+    perror("Invalid MeMS Virtual address for mems_free\n");
 }

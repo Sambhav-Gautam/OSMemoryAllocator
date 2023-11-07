@@ -6,18 +6,18 @@ int main(int argc, char const *argv[])
 {
     // initialise the MeMS system 
     mems_init();
-    int* ptr[10];
-
+    int* ptr[15];
+    
     /*
     This allocates 10 arrays of 250 integers each
     */
     printf("\n------- Allocated virtual addresses [mems_malloc] -------\n");
-    for(int i=0;i<1;i++){
+    for(int i=0;i<10;i++){
         ptr[i] = (int*)mems_malloc(sizeof(int)*250);
         printf("Virtual address: %lu\n", (unsigned long)ptr[i]);
     }
     mems_print_stats();
-
+    
     /*
     In this section we are tring to write value to 1st index of array[0] (here it is 0 based indexing).
     We get get value of both the 0th index and 1st index of array[0] by using function mems_get.
@@ -44,13 +44,13 @@ int main(int argc, char const *argv[])
     // This section shows the effect of freeing up space on free list and also the effect of 
     // reallocating the space that will be fullfilled by the free list.
     // */
-    // printf("\n--------- Freeing up the memory [mems_free] --------\n");
-    // mems_free(ptr[3]);
-    // mems_print_stats();
-    // ptr[3] = (int*)mems_malloc(sizeof(int)*250);
-    // mems_print_stats();
+    printf("\n--------- Freeing up the memory [mems_free] --------\n");
+    mems_free(ptr[3]);
+    mems_print_stats();
+    ptr[3] = (int*)mems_malloc(sizeof(int)*250);
+    mems_print_stats();
 
     // printf("\n--------- Unmapping all memory [mems_finish] --------\n\n");
-    // mems_finish();
+   
     // return 0;
 }

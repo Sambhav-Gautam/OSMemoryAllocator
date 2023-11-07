@@ -95,7 +95,7 @@ void *mems_malloc(size_t size) {
       sub_t *new_hole =
           (sub_t *)((char *)new_main->sub_chain.mem_start_addr + size);
       new_hole->mem_start_addr = new_main->sub_chain.mem_end_addr + 1;
-      new_hole->mem_end_addr = new_hole->mem_start_addr + (allocate +- size) - 1;
+      new_hole->mem_end_addr = new_hole->mem_start_addr + (allocate - size) - 1;
 
       // Virtual Mapping
       new_hole->SVA = new_main->sub_chain.EVA + 1;
@@ -316,29 +316,27 @@ void mems_finish() {
    head = NULL;
    tail = NULL;
    mems_start = NULL;
+   mems_init_used =0;
    printf("..........Successfully UnMapped the Memory without Errors .........\n");
 }
 
 
 void mems_free(void* ptr) {
-  if (mems_init_used == 0) {
-    fprintf(stderr, "Error: Memory system not initialized. Call mems_init() first.\n");
-    fprintf(stderr, "Program exited ...\n");
-    exit(EXIT_FAILURE);
-  }
+    if (mems_init_used == 0) {
+        fprintf(stderr, "Error: Memory system not initialized. Call mems_init() first.\n");
+        fprintf(stderr, "Program exited ...\n");
+        exit(EXIT_FAILURE);
+    }
     main_t* current_main = head;
 
     while (current_main != NULL) {
         sub_t *current_sub = &(current_main->sub_chain);
 
-        
         while (current_sub != NULL) {
             if (current_sub->SVA == ptr) {
-                
                 current_sub->is_hole = 1;
-
-                
                 current_main->remaining += current_sub->mem_size;
+
 
                 sub_t* next_sub = current_sub->next;
                 if (next_sub != NULL && next_sub->is_hole) {
@@ -348,6 +346,27 @@ void mems_free(void* ptr) {
                     current_sub->next = next_sub->next;
                     if (next_sub->next != NULL) {
                         next_sub->next->prev = current_sub;
+                    }
+                }
+
+                sub_t* prev_sub = current_sub->prev;
+                if (prev_sub != NULL && prev_sub->is_hole) {
+                    prev_sub->mem_size += current_sub->mem_size;
+                    prev_sub->mem_end_addr = current_sub->mem_end_addr;
+                    prev_sub->EVA = current_sub->EVA;
+                    prev_sub->next = current_sub->next;
+                    if (current_sub->next != NULL) {
+                        current_sub->next->prev = prev_sub;
+                    }
+                }
+
+                if (prev_sub != NULL && prev_sub->is_hole && current_sub->is_hole) {
+                    prev_sub->mem_size += current_sub->mem_size;
+                    prev_sub->mem_end_addr = current_sub->mem_end_addr;
+                    prev_sub->EVA = current_sub->EVA;
+                    prev_sub->next = current_sub->next;
+                    if (current_sub->next != NULL) {
+                        current_sub->next->prev = prev_sub;
                     }
                 }
 
@@ -365,9 +384,9 @@ void mems_free(void* ptr) {
         current_main = current_main->next;
     }
 
-   
     perror("Invalid MeMS Virtual address for mems_free\n");
 }
+
 
 
 void *mems_get(void *v_ptr) {

@@ -29,5 +29,3 @@ PAGE_SIZE= 4096 Bytes
 Starting MeMS Virtual Address= 1000
 
 ![Example Output](example_output.jpg)
-# MEMS_SYSTEM
-# MEMS_SYSTEM

@@ -39,5 +39,8 @@
   "homepage": "https://github.com/Sambhav-Gautam/osmemoryallocator#readme",
   "engines": {
     "node": ">=14.0.0"
+  },
+  "directories": {
+    "example": "example"
   }
 }

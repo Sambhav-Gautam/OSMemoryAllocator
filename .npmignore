@@ -1,0 +1,12 @@
+node_modules/
+*.o
+*.gyp
+build/
+!build/Release/mems.node
+example
+example_output.jpg
+*.tgz
+test.js
+Makefile
+*.mk
+*.d

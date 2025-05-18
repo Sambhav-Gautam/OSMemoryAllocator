@@ -1,5 +1,5 @@
 {
-  "name": "@Sambhav-Gautam/osmemoryallocator",
+  "name": "@sambhav-gautam/osmemoryallocator",
   "version": "1.0.0",
   "description": "A Node.js module for custom memory management using the MeMS system. [Documentation](https://docs.google.com/document/d/1Gs9kC3187lLrinvK1SueTc8dHCJ0QP43eRlrCRlXiCY/edit?usp=sharing)",
   "main": "build/Release/mems.node",

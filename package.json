@@ -1,19 +1,27 @@
 {
   "name": "@sambhav-gautam/osmemoryallocator",
-  "version": "1.0.1",
+  "version": "1.0.47",
   "description": "A Node.js module for custom memory management using the MeMS system. [Documentation](https://docs.google.com/document/d/1Gs9kC3187lLrinvK1SueTc8dHCJ0QP43eRlrCRlXiCY/edit?usp=sharing)",
-  "main": "build/Release/mems.node",
+  "main": "index.js",
   "scripts": {
     "install": "node-gyp rebuild",
     "build": "node-gyp rebuild",
     "test": "node test.js",
     "release": "standard-version && git push --follow-tags && npm publish --access public"
   },
-  "keywords": ["memory", "management", "mems", "native", "addon", "allocator"],
+  "keywords": [
+    "memory",
+    "management",
+    "mems",
+    "native",
+    "addon",
+    "allocator"
+  ],
   "author": "Sambhav Gautam",
   "license": "ISC",
   "dependencies": {
-    "node-gyp": "^10.0.0"
+    "node-gyp": "^10.0.0",
+    "nan": "^2.17.0"
   },
   "devDependencies": {
     "standard-version": "^9.5.0"
@@ -32,5 +40,9 @@
   "homepage": "https://github.com/Sambhav-Gautam/osmemoryallocator#readme",
   "engines": {
     "node": ">=14.0.0"
-  }
+  },
+  "directories": {
+    "example": "example"
+  },
+  "type": "commonjs"
 }

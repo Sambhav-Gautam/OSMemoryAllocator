@@ -1,8 +1,6 @@
+cat > .npmignore << 'EOF'
 node_modules/
 *.o
-*.gyp
-build/
-!build/Release/mems.node
 example
 example_output.jpg
 *.tgz
@@ -10,6 +8,11 @@ test.js
 Makefile
 *.mk
 *.d
-index.js
 binding.Makefile
 obj.target/
+build/Release/*.obj
+build/Release/obj.target/
+build/*/Makefile
+build/config.gypi
+build/binding.Makefile
+EOF

@@ -1,7 +1,7 @@
 {
   "name": "@sambhav-gautam/osmemoryallocator",
   "version": "1.0.47",
-  "description": "A Node.js module for custom memory management using the MeMS system. [Documentation](https://docs.google.com/document/d/1Gs9kC3187lLrinvK1SueTc8dHCJ0QP43eRlrCRlXiCY/edit?usp=sharing)",
+ "description": "A Node.js module for custom memory management using the MeMS system, providing efficient page-based allocation and deallocation via a native addon.",
   "main": "index.js",
   "scripts": {
     "install": "node-gyp rebuild",

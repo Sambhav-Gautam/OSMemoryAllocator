@@ -1,51 +1,74 @@
-MeMS: Node.js Memory Allocator 📦
+# MeMS: Node.js Memory Allocator
+
+```plaintext
+  __  __ _____ __  __  ____  
+ |  \/  | ____|  \/  |/ ___| 
+ | |\/| |  _| | |\/| | |___  
+ |_|  |_|_|   |_|  |_|\____| 
+ Memory Management System
+```
+
 Custom memory management for Node.js with a page-based allocation system.
 
+---
 
-🚀 Overview
-MeMS (Memory Management System) is a Node.js module that provides a custom memory allocator implemented as a native addon. Built with node-gyp, it offers efficient page-based memory allocation and deallocation, ideal for applications requiring fine-grained control over memory. MeMS uses a virtual address space with main and sub-chains to manage memory blocks, supporting functions like malloc, free, and get for physical address mapping.
-Key Features
+## Overview
 
-🛠 Page-Based Allocation: Allocates memory in 4KB pages for efficiency.
-🔗 Main and Sub-Chains: Organizes memory in linked lists for dynamic allocation.
-📊 Memory Stats: Provides detailed statistics on memory usage and fragmentation.
-💻 Cross-Platform: Supports Windows, macOS, and Linux (Node.js >= 14.0.0).
-⚡ Native Performance: Leverages C for low-level memory operations.
+MeMS (Memory Management System) is a Node.js module that provides a custom memory allocator implemented as a native addon. Built with node-gyp, it offers efficient page-based memory allocation and deallocation, ideal for applications requiring fine-grained control over memory.
 
+### Key Features
 
-📋 Prerequisites
+- **Page-Based Allocation**: Allocates memory in 4KB pages for efficiency  
+- **Main and Sub-Chains**: Organizes memory in linked lists for dynamic allocation  
+- **Memory Stats**: Provides detailed statistics on memory usage and fragmentation  
+- **Cross-Platform**: Supports Windows, macOS, and Linux (Node.js >= 14.0.0)  
+- **Native Performance**: Leverages C for low-level memory operations  
+
+---
+
+## Prerequisites
+
 Before installing MeMS, ensure you have the following:
 
-Node.js (>= 14.0.0): Download
-Python (3.7–3.12): Required for node-gyp builds. Download
-Build Tools:
-Windows: Visual Studio 2022 Build Tools with "Desktop development with C++" workload.
-macOS/Linux: gcc, make, and python3.
+- **Node.js** (>= 14.0.0): [Download](https://nodejs.org/)
+- **Python** (3.7–3.12): Required for node-gyp builds. [Download](https://www.python.org/)
+- **Build Tools**:
+  - Windows: Visual Studio 2022 Build Tools with "Desktop development with C++" workload
+  - macOS/Linux: gcc, make, and python3
+- **node-gyp**: Install globally with `npm install -g node-gyp@latest`
 
+### Windows Setup
 
-node-gyp: Install globally with npm install -g node-gyp@latest.
-
-
-🛠 Installation
-Install MeMS via npm:
-npm install @sambhav-gautam/osmemoryallocator
-
-This command downloads the package and runs node-gyp rebuild to compile the native addon (mems.node). Ensure your build environment is set up correctly to avoid compilation errors.
-Windows Setup
-
-Install Python 3.12:winget install Python.Python.3.12
+```bash
+winget install Python.Python.3.12
 npm config set python C:\Path\To\Python312\python.exe
+```
 
+Install Visual Studio 2022 Build Tools with C++ workload.  
+For stability with Node.js 20.x:
 
-Install Visual Studio 2022 Build Tools with C++ workload.
-Use Node.js 20.x for stability:nvm install 20
+```bash
+nvm install 20
 nvm use 20
+```
 
+---
 
+## Installation
 
+Install MeMS via npm:
 
-💻 Usage
-MeMS provides a simple API for memory management. Below is an example to get started:
+```bash
+npm install @sambhav-gautam/osmemoryallocator
+```
+
+This command downloads the package and runs `node-gyp rebuild` to compile the native addon (`mems.node`).
+
+---
+
+## Usage
+
+```javascript
 const mems = require('@sambhav-gautam/osmemoryallocator');
 
 // Initialize MeMS
@@ -70,8 +93,10 @@ console.log('Memory freed');
 // Clean up
 mems.finish();
 console.log('MeMS finished');
+```
 
-Example Output:
+**Example Output:**
+```
 MeMS initialized
 Allocated at virtual address: 1000
 Physical address: <some_physical_address>
@@ -84,77 +109,57 @@ Sub-chain Length array: 2
 Memory freed
 ..........Successfully UnMapped the Memory without Errors .........
 MeMS finished
+```
 
+---
 
-🖼 Architecture
+## Architecture
 
-Placeholder: Add an architecture diagram showing main/sub-chains, virtual/physical address mapping, and page allocation. Host the image in your GitHub repo (e.g., images/architecture.png) and update the URL.
-MeMS uses a two-level structure:
+```
++----------------+    +----------------+    +----------------+
+|   Main Chain   |--->| Virtual Memory |--->| Physical Pages |
++----------------+    +----------------+    +----------------+
+       |                     |
+       v                     v
++----------------+    +----------------+
+|  Sub-Chain     |    | Address Mapping|
++----------------+    +----------------+
+```
 
-Main Chain: Tracks large memory blocks allocated via mmap, each with a virtual address range (SVA to EVA).
-Sub-Chain: Manages allocated and free (hole) segments within a main block, enabling efficient reuse.
+MeMS uses a two-level structure:  
+- **Main Chain**: Tracks large memory blocks allocated via mmap  
+- **Sub-Chain**: Manages allocated and free segments within main blocks  
 
+---
 
-📚 API Reference
+## API Reference
 
+| Function       | Description                                      | Parameters       | Returns         |
+|----------------|--------------------------------------------------|------------------|-----------------|
+| `init()`       | Initializes the MeMS system                      | None             | undefined       |
+| `malloc(size)` | Allocates size bytes (aligns to 4KB)             | size (number)    | BigInt (vaddr)  |
+| `get(v_ptr)`   | Maps virtual address to physical address         | v_ptr (BigInt)   | BigInt (paddr)  |
+| `free(ptr)`    | Frees memory at given virtual address            | ptr (BigInt)     | undefined       |
+| `printStats()` | Prints memory usage statistics                   | None             | undefined       |
+| `finish()`     | Unmaps all allocated memory                      | None             | undefined       |
 
+**Notes:**
+- Always call `init()` before other functions  
+- `malloc` returns a BigInt representing the starting virtual address  
+- `free` merges adjacent holes to reduce fragmentation  
 
-Function
-Description
-Parameters
-Returns
+---
 
+## Testing
 
+Run the included test script:
 
-init()
-Initializes the MeMS system, setting up the memory management structure.
-None
-undefined
-
-
-malloc(size)
-Allocates size bytes, returning a virtual address. Aligns to 4KB pages.
-size (number)
-BigInt (virtual address)
-
-
-get(v_ptr)
-Maps a virtual address to its physical address.
-v_ptr (BigInt)
-BigInt (physical address)
-
-
-free(ptr)
-Frees memory at the given virtual address, marking it as a hole.
-ptr (BigInt)
-undefined
-
-
-printStats()
-Prints memory usage statistics, including pages used and unused space.
-None
-undefined
-
-
-finish()
-Unmaps all allocated memory and resets the MeMS system.
-None
-undefined
-
-
-Notes
-
-Always call init() before other functions.
-malloc returns a BigInt representing the starting virtual address (SVA).
-free merges adjacent holes to reduce fragmentation.
-Use printStats to debug memory allocation.
-
-
-🧪 Testing
-Run the included test script to verify functionality:
+```bash
 npm test
+```
 
-This executes test.js (create one if not present):
+Test script example (`test.js`):
+```javascript
 const mems = require('@sambhav-gautam/osmemoryallocator');
 
 mems.init();
@@ -164,42 +169,41 @@ mems.printStats();
 mems.free(ptr);
 mems.printStats();
 mems.finish();
+```
 
+---
 
-🛠 Building from Source
-To build the native addon manually:
+## Building from Source
 
-Clone the repository:git clone https://github.com/Sambhav-Gautam/osmemoryallocator.git
+```bash
+git clone https://github.com/Sambhav-Gautam/osmemoryallocator.git
 cd osmemoryallocator
+npm install
+npm run build
+```
 
+---
 
-Install dependencies:npm install
+## Contributing
 
+1. Fork the repository  
+2. Create a feature branch: `git checkout -b feature/your-feature`  
+3. Commit changes: `git commit -m "Add your feature"`  
+4. Push to the branch: `git push origin feature/your-feature`  
+5. Open a pull request  
 
-Build:npm run build
+See `CONTRIBUTING.md` for details.
 
+---
 
+## License
 
+ISC License. See `LICENSE` for details.
 
-🤝 Contributing
-Contributions are welcome! 🎉 Follow these steps:
+---
 
-Fork the repository.
-Create a feature branch: git checkout -b feature/your-feature.
-Commit changes: git commit -m "Add your feature".
-Push to the branch: git push origin feature/your-feature.
-Open a pull request.
+## Contact
 
-Please read CONTRIBUTING.md for details.
-
-📜 License
-This project is licensed under the ISC License. See LICENSE for details.
-
-📬 Contact
-
-Author: Sambhav Gautam
-GitHub: Sambhav-Gautam
-Issues: Report a bug
-
-
-Built with 💖 for performance-driven Node.js applications.
+- **Author**: Sambhav Gautam  
+- **GitHub**: [Sambhav-Gautam](https://github.com/Sambhav-Gautam)  
+- **Issues**: [Report a bug](https://github.com/Sambhav-Gautam/osmemoryallocator/issues)

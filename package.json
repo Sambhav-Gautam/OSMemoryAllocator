@@ -9,6 +9,12 @@
     "test": "node test.js",
     "release": "standard-version && git push --follow-tags && npm publish --access public"
   },
+  "files": [
+  "binding.gyp",
+  "src/",
+  "build/",
+  "index.js"
+],
   "keywords": [
     "memory",
     "management",

@@ -6,7 +6,9 @@
 // Initialize MeMS
 static napi_value Init(napi_env env, napi_callback_info info) {
   mems_init();
-  return NULL;
+  napi_value undefined;
+  napi_get_undefined(env, &undefined);
+  return undefined;
 }
 
 // Allocate memory
@@ -78,19 +80,25 @@ static napi_value Free(napi_env env, napi_callback_info info) {
   printf("Free: ptr=%lu, lossless=%d\n", ptr, lossless);
 
   mems_free((void *)ptr);
-  return NULL;
+  napi_value undefined;
+  napi_get_undefined(env, &undefined);
+  return undefined;
 }
 
 // Print stats
 static napi_value PrintStats(napi_env env, napi_callback_info info) {
   mems_print_stats();
-  return NULL;
+  napi_value undefined;
+  napi_get_undefined(env, &undefined);
+  return undefined;
 }
 
 // Finish MeMS
 static napi_value Finish(napi_env env, napi_callback_info info) {
   mems_finish();
-  return NULL;
+  napi_value undefined;
+  napi_get_undefined(env, &undefined);
+  return undefined;
 }
 
 // Module initialization

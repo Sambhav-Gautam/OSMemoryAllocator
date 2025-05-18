@@ -1,6 +1,6 @@
 {
   "name": "osmemoryallocator",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A Node.js module for custom memory management using the MeMS system. [Documentation](https://docs.google.com/document/d/1Gs9kC3187lLrinvK1SueTc8dHCJ0QP43eRlrCRlXiCY/edit?usp=sharing)",
   "main": "build/Release/mems.node",
   "scripts": {
@@ -9,7 +9,14 @@
     "test": "node test.js",
     "release": "standard-version && git push --follow-tags && npm publish --access public"
   },
-  "keywords": ["memory", "management", "mems", "native", "addon", "allocator"],
+  "keywords": [
+    "memory",
+    "management",
+    "mems",
+    "native",
+    "addon",
+    "allocator"
+  ],
   "author": "Sambhav Gautam",
   "license": "ISC",
   "dependencies": {

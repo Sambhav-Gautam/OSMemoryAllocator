@@ -11,3 +11,5 @@ Makefile
 *.mk
 *.d
 index.js
+binding.Makefile
+obj.target/

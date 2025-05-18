@@ -11,6 +11,11 @@
 Custom memory management for Node.js with a page-based allocation system.
 
 ---
+# osmemoryallocator
+
+[![npm version](https://img.shields.io/npm/v/@sambhav-gautam/osmemoryallocator)](https://www.npmjs.com/package/@sambhav-gautam/osmemoryallocator)
+[![npm downloads](https://img.shields.io/npm/dw/@sambhav-gautam/osmemoryallocator)](https://www.npmjs.com/package/@sambhav-gautam/osmemoryallocator)
+
 
 ## Overview
 

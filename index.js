@@ -1,3 +1,1 @@
-const mems = require('./build/Release/mems');
-
-module.exports = mems;
+module.exports = require('./build/Release/mems.node');

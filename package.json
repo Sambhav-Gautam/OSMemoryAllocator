@@ -1,6 +1,6 @@
 {
   "name": "osmemoryallocator",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A Node.js module for custom memory management using the MeMS system. [Documentation](https://docs.google.com/document/d/1Gs9kC3187lLrinvK1SueTc8dHCJ0QP43eRlrCRlXiCY/edit?usp=sharing)",
   "main": "src/mems.node",
   "scripts": {

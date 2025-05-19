@@ -17,7 +17,7 @@ This project is an educational implementation of memory allocation concepts in O
 1. **Fork** the repository.
 2. **Clone** your fork:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/OSMemoryAllocator.git
+   git clone https://github.com/Sambhav-Gautam/OSMemoryAllocator.git
    cd OSMemoryAllocator
 
 
